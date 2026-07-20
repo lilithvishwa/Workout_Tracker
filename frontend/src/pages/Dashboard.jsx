@@ -3,6 +3,7 @@ import { useWorkoutStore } from "../store/workoutStore";
 import { useAuthStore } from "../store/authStore";
 import StreakCard from "../components/dashboard/StreakCard";
 import StatCards from "../components/dashboard/StatCards";
+import MilestoneProgress from "../components/dashboard/MilestoneProgress";
 
 export default function Dashboard() {
   const { streak, fetchStreak } = useWorkoutStore();
@@ -18,6 +19,7 @@ export default function Dashboard() {
         Hey {user?.name?.split(" ")[0]} 👋
       </h1>
       <StreakCard streak={streak} />
+      <MilestoneProgress currentStreak={streak?.currentStreak ?? 0} />
       <StatCards streak={streak} />
 
       {streak?.lastBreakReason?.category && (

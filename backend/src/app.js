@@ -6,6 +6,7 @@ const workoutRoutes = require("./routes/workoutRoutes");
 const streakRoutes = require("./routes/streakRoutes");
 const planRoutes = require("./routes/planRoutes");
 const notificationRoutes = require("./routes/notificationRoutes");
+const statsRoutes = require("./routes/statsRoutes");
 const { errorHandler, notFound } = require("./middleware/errorHandler");
 
 const app = express();
@@ -26,13 +27,14 @@ app.get("/", (req, res) => {
   });
 });
 
-app.get("/api/hea lth", (req, res) => res.json({ status: "ok" }));
+app.get("/api/health", (req, res) => res.json({ status: "ok" }));
 
 app.use("/api/auth", authRoutes);
 app.use("/api/workouts", workoutRoutes);
 app.use("/api/streak", streakRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/stats", statsRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

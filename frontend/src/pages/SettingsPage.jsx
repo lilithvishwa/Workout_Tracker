@@ -2,10 +2,12 @@ import { useState } from "react";
 import toast from "react-hot-toast";
 import { updateReminderSettingsApi } from "../api/authApi";
 import { useAuthStore } from "../store/authStore";
+import { useThemeStore } from "../store/themeStore";
 import { usePushNotifications } from "../hooks/usePushNotifications";
 
 export default function SettingsPage() {
   const { user, logout } = useAuthStore();
+  const { dark, toggle } = useThemeStore();
   const { enablePush } = usePushNotifications();
   const [reminderTime, setReminderTime] = useState("20:00");
 
@@ -58,6 +60,23 @@ export default function SettingsPage() {
         <p className="mt-2 text-xs text-pine/40 dark:text-paper/30">
           Enable this on each device (laptop + phone) separately to get reminders everywhere.
         </p>
+      </div>
+
+      <div className="flex items-center justify-between rounded-stamp border border-pine/10 bg-white/60 p-5 dark:bg-dusk-card dark:border-paper/10">
+        <div>
+          <h3 className="font-display font-semibold text-pine dark:text-paper">Dark mode</h3>
+          <p className="text-sm text-pine/60 dark:text-paper/50">Easier on the eyes at night.</p>
+        </div>
+        <button
+          onClick={toggle}
+          className={`h-7 w-12 rounded-full transition ${dark ? "bg-ember" : "bg-pine/20"}`}
+        >
+          <span
+            className={`block h-5 w-5 translate-x-1 rounded-full bg-paper transition-transform ${
+              dark ? "translate-x-6" : ""
+            }`}
+          />
+        </button>
       </div>
 
       <div className="rounded-stamp border border-pine/10 bg-white/60 p-5 dark:bg-dusk-card dark:border-paper/10">

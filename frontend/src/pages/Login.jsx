@@ -24,12 +24,6 @@ export default function Login() {
     <div className="flex min-h-screen items-center justify-center p-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm space-y-4">
         <h1 className="font-display text-2xl font-bold text-pine dark:text-paper">
-           <img
-            src="./public/Lilith.jpg"
-            height="200px"
-            width="290px"
-            className="ml-4 md:ml-0 md:w-[320px]"
-          /> 
           Welcome back
         </h1>
         <input
@@ -48,17 +42,11 @@ export default function Login() {
           onChange={(e) => setForm({ ...form, password: e.target.value })}
           className="w-full rounded-stamp border border-pine/20 bg-transparent p-3 text-sm dark:border-paper/20"
         />
-        <button
-          type="submit"
-          className="w-full rounded-stamp bg-ember py-3 text-sm font-medium text-paper"
-        >
+        <button type="submit" className="w-full rounded-stamp bg-ember py-3 text-sm font-medium text-paper">
           Log in
         </button>
         <p className="text-center text-sm text-pine/60 dark:text-paper/50">
-          No account?{" "}
-          <Link to="/register" className="text-ember">
-            Register
-          </Link>
+          No account? <Link to="/register" className="text-ember">Register</Link>
         </p>
       </form>
     </div>

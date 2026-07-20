@@ -3,9 +3,11 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import CalendarPage from "./pages/CalendarPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import PlannerPage from "./pages/PlannerPage";
 import SettingsPage from "./pages/SettingsPage";
 import Navbar from "./components/common/Navbar";
+import InstallBanner from "./components/common/InstallBanner";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
 
@@ -14,6 +16,7 @@ function AppLayout({ children }) {
   return (
     <div className="min-h-screen">
       {isAuthenticated && <Navbar />}
+      {isAuthenticated && <InstallBanner />}
       <main>{children}</main>
     </div>
   );
@@ -38,6 +41,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CalendarPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <AnalyticsPage />
             </ProtectedRoute>
           }
         />

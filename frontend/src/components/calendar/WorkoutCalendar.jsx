@@ -7,12 +7,17 @@ import {
   getDay,
   addMonths,
   subMonths,
+  isAfter,
+  startOfDay,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Check, X, Coffee } from "lucide-react";
 import { useWorkoutStore } from "../../store/workoutStore";
 import { getCurrentPlansApi } from "../../api/planApi";
 import BreakReasonModal from "./BreakReasonModal";
+import DayDetailModal from "./DayDetailModal";
 import toast from "react-hot-toast";
+import confetti from "canvas-confetti";
+import { checkMilestone } from "../../utils/milestones";
 
 const statusStyles = {
   completed: "bg-pine text-paper stamp-completed",
@@ -23,7 +28,8 @@ const statusStyles = {
 export default function WorkoutCalendar() {
   const [monthCursor, setMonthCursor] = useState(new Date());
   const [plans, setPlans] = useState([]);
-  const [activeDate, setActiveDate] = useState(null);
+  const [activeDate, setActiveDate] = useState(null); // date open in the check-in flow (new or edit)
+  const [viewDate, setViewDate] = useState(null); // date open in the read-only detail modal
   const [pendingBreak, setPendingBreak] = useState(null);
 
   const { monthLogs, fetchMonthLogs, logWorkout } = useWorkoutStore();
@@ -43,6 +49,17 @@ export default function WorkoutCalendar() {
   });
 
   const logFor = (dateStr) => monthLogs.find((l) => l.date === dateStr);
+  const today = startOfDay(new Date());
+
+  const handleDayClick = (day, dateStr) => {
+    if (isAfter(startOfDay(day), today)) return; // future dates are disabled
+    const log = logFor(dateStr);
+    if (log) {
+      setViewDate(dateStr);
+    } else {
+      setActiveDate(dateStr);
+    }
+  };
 
   const handleMarkRest = async (dateStr) => {
     try {
@@ -74,10 +91,20 @@ export default function WorkoutCalendar() {
   };
 
   const submitCompleted = async (exercisesDone) => {
+    const previousStreak = useWorkoutStore.getState().streak?.currentStreak ?? 0;
     try {
-      await logWorkout({ date: activeDate, status: "completed", exercisesDone });
-      toast.success("Nice work — day logged!");
+      const { streak } = await logWorkout({ date: activeDate, status: "completed", exercisesDone });
       setActiveDate(null);
+
+      const milestone = checkMilestone(previousStreak, streak.currentStreak);
+      if (milestone) {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        toast.success(`${milestone.emoji} ${milestone.label}! ${streak.currentStreak} days and counting.`, {
+          duration: 5000,
+        });
+      } else {
+        toast.success("Nice work — day logged!");
+      }
     } catch (e) {
       toast.error(e.response?.data?.message || "Failed to save");
     }
@@ -112,14 +139,17 @@ export default function WorkoutCalendar() {
           const dateStr = format(day, "yyyy-MM-dd");
           const log = logFor(dateStr);
           const isToday = dateStr === format(new Date(), "yyyy-MM-dd");
+          const isFutureDay = isAfter(startOfDay(day), today);
 
           return (
             <button
               key={dateStr}
-              onClick={() => setActiveDate(dateStr)}
+              disabled={isFutureDay}
+              onClick={() => handleDayClick(day, dateStr)}
               className={`aspect-square rounded-stamp text-sm font-mono transition
                 ${log ? statusStyles[log.status] : "bg-pine/5 text-pine/70 dark:bg-paper/5 dark:text-paper/50"}
-                ${isToday ? "ring-2 ring-ember" : ""}`}
+                ${isToday ? "ring-2 ring-ember" : ""}
+                ${isFutureDay ? "cursor-not-allowed opacity-30" : ""}`}
             >
               {format(day, "d")}
             </button>
@@ -144,6 +174,7 @@ export default function WorkoutCalendar() {
             </p>
             <CheckInInline
               plans={plans}
+              existingLog={logFor(activeDate)}
               onComplete={submitCompleted}
               onRest={() => handleMarkRest(activeDate)}
               onMissed={() => handleMarkMissed(activeDate)}
@@ -160,15 +191,32 @@ export default function WorkoutCalendar() {
           onSubmit={submitBreak}
         />
       )}
+
+      {viewDate && (
+        <DayDetailModal
+          dateStr={viewDate}
+          log={logFor(viewDate)}
+          onClose={() => setViewDate(null)}
+          onEdit={() => {
+            setViewDate(null);
+            setActiveDate(viewDate);
+          }}
+        />
+      )}
     </div>
   );
 }
 
 // Inline chooser: completed / rest / missed. Completed expands into a reps form.
-function CheckInInline({ plans, onComplete, onRest, onMissed, onCancel }) {
-  const [showRepsForm, setShowRepsForm] = useState(false);
+function CheckInInline({ plans, existingLog, onComplete, onRest, onMissed, onCancel }) {
+  const [showRepsForm, setShowRepsForm] = useState(existingLog?.status === "completed");
+  const existingReps = Object.fromEntries(
+    (existingLog?.exercisesDone || []).map((e) => [e.name, e.reps])
+  );
   const [reps, setReps] = useState(
-    Object.fromEntries(plans.map((p) => [p.exerciseName, p.targetReps]))
+    Object.fromEntries(
+      plans.map((p) => [p.exerciseName, existingReps[p.exerciseName] ?? p.targetReps])
+    )
   );
 
   if (showRepsForm) {
