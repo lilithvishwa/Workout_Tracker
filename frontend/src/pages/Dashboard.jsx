@@ -1,0 +1,31 @@
+import { useEffect } from "react";
+import { useWorkoutStore } from "../store/workoutStore";
+import { useAuthStore } from "../store/authStore";
+import StreakCard from "../components/dashboard/StreakCard";
+import StatCards from "../components/dashboard/StatCards";
+
+export default function Dashboard() {
+  const { streak, fetchStreak } = useWorkoutStore();
+  const user = useAuthStore((s) => s.user);
+
+  useEffect(() => {
+    fetchStreak();
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-lg space-y-5 p-4 pb-24 sm:pb-8">
+      <h1 className="font-display text-2xl font-bold text-pine dark:text-paper">
+        Hey {user?.name?.split(" ")[0]} 👋
+      </h1>
+      <StreakCard streak={streak} />
+      <StatCards streak={streak} />
+
+      {streak?.lastBreakReason?.category && (
+        <div className="rounded-stamp border border-clay/20 bg-clay/10 p-4 text-sm text-clay">
+          Last break: <span className="capitalize">{streak.lastBreakReason.category}</span>
+          {streak.lastBreakReason.note && ` — "${streak.lastBreakReason.note}"`}
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  h1, h2, h3 {
+    @apply font-display;
+  }
+}
+
+/* Stamp effect for completed calendar days - the signature visual motif */
+.stamp-completed {
+  transform: rotate(-2deg);
+}
+.stamp-completed:nth-child(3n) {
+  transform: rotate(2deg);
+}
