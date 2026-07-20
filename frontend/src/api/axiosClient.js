@@ -2,7 +2,7 @@ import axios from "axios";
 import { useAuthStore } from "../store/authStore";
 
 // Set VITE_API_URL in a .env file at the frontend root for production deploys.
-const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const baseURL = import.meta.env.VITE_API_URL;
 
 const axiosClient = axios.create({ baseURL });
 
