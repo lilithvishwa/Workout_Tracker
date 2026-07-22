@@ -1,68 +1,91 @@
-const { format, subDays, parseISO } = require("date-fns");
+const { differenceInCalendarDays, parseISO } = require("date-fns");
+const WorkoutLog = require("../models/WorkoutLog");
 const Streak = require("../models/Streak");
 
-const DATE_FMT = "yyyy-MM-dd";
-
-const yesterdayOf = (dateStr) => format(subDays(parseISO(dateStr), 1), DATE_FMT);
-
 /**
- * Recalculates the user's streak whenever a WorkoutLog is created or updated.
+ * Recomputes a user's ENTIRE streak state by replaying every WorkoutLog they
+ * have, in chronological order. This is deliberately NOT an incremental
+ * patch — incremental patching is what caused the double-counting and
+ * streak-reset bugs. Replaying from source-of-truth logs means the streak
+ * is always internally consistent, no matter how many times a day gets
+ * edited, re-submitted, or logged out of order.
  *
  * Rules:
- * - "completed": counts toward the streak. Continues the streak only if the
- *   immediately preceding day was logged and was NOT "missed". Otherwise starts fresh at 1.
- * - "rest": does NOT break the streak and does NOT increment it. It just needs
- *   the previous day to not already be a broken chain.
- * - "missed": breaks the streak. The current streak length (if > 0) is archived
- *   into streakHistory before resetting to 0.
- *
- * @param {ObjectId} userId
- * @param {Object} log - the WorkoutLog document just saved { date, status }
+ * - "completed" extends the streak by 1, but only if it's exactly one
+ *   calendar day after the previously processed log. Any gap (including an
+ *   un-logged day with no entry at all) breaks the streak.
+ * - "rest" does not add to the streak, but also does not break it, as long
+ *   as it's contiguous with the previous log.
+ * - "missed" always breaks the streak and is archived into streakHistory.
+ * - Total workout days = count of "completed" logs, full stop.
  */
-async function recalculateStreakOnLog(userId, log) {
-  let streak = await Streak.findOne({ user: userId });
-  if (!streak) {
-    streak = await Streak.create({ user: userId });
-  }
+async function recomputeStreak(userId) {
+  const logs = await WorkoutLog.find({ user: userId }).sort({ date: 1 });
 
-  const prevDay = yesterdayOf(log.date);
-  // Chain is intact if the last logged day was literally yesterday AND wasn't a miss.
-  const chainIntact =
-    streak.lastLoggedDate === prevDay && streak.lastBreakDate !== prevDay;
+  let currentStreak = 0;
+  let bestStreak = 0;
+  let totalWorkoutDays = 0;
+  let currentStreakStart = null;
+  let lastDate = null;
+  let lastCompletedDate = null;
+  let lastBreakReason = null;
+  const streakHistory = [];
 
-  if (log.status === "completed") {
-    streak.currentStreak = chainIntact ? streak.currentStreak + 1 : 1;
-    streak.totalWorkoutDays += 1;
-    streak.lastCompletedDate = log.date;
-    if (streak.currentStreak > streak.bestStreak) {
-      streak.bestStreak = streak.currentStreak;
-    }
-  } else if (log.status === "rest") {
-    if (!chainIntact) {
-      streak.currentStreak = 0;
-    }
-    // else: streak stays exactly as-is, rest day is "free"
-  } else if (log.status === "missed") {
-    if (streak.currentStreak > 0) {
-      streak.streakHistory.push({
-        length: streak.currentStreak,
-        startDate: null, // could be computed by walking WorkoutLog backwards if needed
-        endDate: prevDay,
-        endedByReason: log.breakReason?.category || "other",
+  const breakStreak = (reasonCategory, endDate) => {
+    if (currentStreak > 0) {
+      streakHistory.push({
+        length: currentStreak,
+        startDate: currentStreakStart,
+        endDate,
+        endedByReason: reasonCategory,
       });
     }
-    streak.currentStreak = 0;
-    streak.lastBreakDate = log.date;
-    streak.lastBreakReason = {
-      category: log.breakReason?.category,
-      note: log.breakReason?.note,
-      date: log.date,
-    };
+    currentStreak = 0;
+    currentStreakStart = null;
+  };
+
+  for (const log of logs) {
+    const gapExists =
+      lastDate !== null && differenceInCalendarDays(parseISO(log.date), parseISO(lastDate)) !== 1;
+
+    if (gapExists) {
+      breakStreak("unlogged_gap", lastDate);
+    }
+
+    if (log.status === "completed") {
+      if (currentStreak === 0) currentStreakStart = log.date;
+      currentStreak += 1;
+      totalWorkoutDays += 1;
+      lastCompletedDate = log.date;
+      if (currentStreak > bestStreak) bestStreak = currentStreak;
+    } else if (log.status === "missed") {
+      breakStreak(log.breakReason?.category || "other", log.date);
+      lastBreakReason = {
+        category: log.breakReason?.category,
+        note: log.breakReason?.note,
+        date: log.date,
+      };
+    }
+    // "rest" does nothing to currentStreak — it just passes through
+
+    lastDate = log.date;
   }
 
-  streak.lastLoggedDate = log.date;
-  await streak.save();
+  const streak = await Streak.findOneAndUpdate(
+    { user: userId },
+    {
+      user: userId,
+      currentStreak,
+      bestStreak,
+      totalWorkoutDays,
+      lastCompletedDate,
+      lastBreakReason: lastBreakReason || undefined,
+      streakHistory,
+    },
+    { upsert: true, new: true, setDefaultsOnInsert: true }
+  );
+
   return streak;
 }
 
-module.exports = { recalculateStreakOnLog };
+module.exports = { recomputeStreak };

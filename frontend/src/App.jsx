@@ -1,6 +1,8 @@
 import { Routes, Route } from "react-router-dom";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import CalendarPage from "./pages/CalendarPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
@@ -9,6 +11,7 @@ import SettingsPage from "./pages/SettingsPage";
 import Navbar from "./components/common/Navbar";
 import InstallBanner from "./components/common/InstallBanner";
 import ProtectedRoute from "./components/common/ProtectedRoute";
+import ErrorBoundary from "./components/common/ErrorBoundary";
 import { useAuthStore } from "./store/authStore";
 
 function AppLayout({ children }) {
@@ -17,7 +20,9 @@ function AppLayout({ children }) {
     <div className="min-h-screen">
       {isAuthenticated && <Navbar />}
       {isAuthenticated && <InstallBanner />}
-      <main>{children}</main>
+      <main>
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </main>
     </div>
   );
 }
@@ -28,6 +33,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route
           path="/"
           element={

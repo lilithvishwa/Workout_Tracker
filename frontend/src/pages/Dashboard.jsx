@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useWorkoutStore } from "../store/workoutStore";
 import { useAuthStore } from "../store/authStore";
+import { getErrorMessage } from "../api/axiosClient";
 import StreakCard from "../components/dashboard/StreakCard";
 import StatCards from "../components/dashboard/StatCards";
 import MilestoneProgress from "../components/dashboard/MilestoneProgress";
@@ -8,9 +9,10 @@ import MilestoneProgress from "../components/dashboard/MilestoneProgress";
 export default function Dashboard() {
   const { streak, fetchStreak } = useWorkoutStore();
   const user = useAuthStore((s) => s.user);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchStreak();
+    fetchStreak().catch((err) => setError(getErrorMessage(err, "Couldn't load your streak")));
   }, []);
 
   return (
@@ -18,6 +20,22 @@ export default function Dashboard() {
       <h1 className="font-display text-2xl font-bold text-pine dark:text-paper">
         Hey {user?.name?.split(" ")[0]} 👋
       </h1>
+
+      {error && (
+        <div className="rounded-stamp bg-clay/10 p-3 text-sm text-clay">
+          {error}{" "}
+          <button
+            onClick={() => {
+              setError(null);
+              fetchStreak().catch((err) => setError(getErrorMessage(err)));
+            }}
+            className="underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <StreakCard streak={streak} />
       <MilestoneProgress currentStreak={streak?.currentStreak ?? 0} />
       <StatCards streak={streak} />

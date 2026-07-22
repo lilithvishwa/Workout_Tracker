@@ -15,6 +15,10 @@ const userSchema = new mongoose.Schema(
     // Streak freeze (Duolingo-style safety valve)
     streakFreezesAvailable: { type: Number, default: 1 },
     streakFreezesUsedThisMonth: { type: Number, default: 0 },
+
+    // Password reset
+    resetPasswordToken: { type: String, default: null },
+    resetPasswordExpires: { type: Date, default: null },
   },
   { timestamps: true }
 );

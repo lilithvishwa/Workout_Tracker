@@ -67,4 +67,21 @@ const getDayDetail = async (req, res, next) => {
   }
 };
 
-module.exports = { getExerciseProgress, getMonthlySummary, getDayDetail };
+// @route GET /api/stats/heatmap?year=2026
+// Returns every logged day's status for the given year, for a GitHub-style
+// contribution heatmap on the analytics page.
+const getYearHeatmap = async (req, res, next) => {
+  try {
+    const year = req.query.year || new Date().getFullYear();
+    const logs = await WorkoutLog.find({
+      user: req.user._id,
+      date: { $regex: `^${year}` },
+    }).select("date status -_id");
+
+    res.json(logs);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getExerciseProgress, getMonthlySummary, getDayDetail, getYearHeatmap };

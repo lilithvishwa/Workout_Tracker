@@ -19,9 +19,14 @@ export const useWorkoutStore = create((set, get) => ({
   },
 
   fetchStreak: async () => {
-    const { data } = await getStreakApi();
-    set({ streak: data });
-    return data;
+    try {
+      const { data } = await getStreakApi();
+      set({ streak: data });
+      return data;
+    } catch (error) {
+      // leave existing streak value in place rather than wiping it on a transient failure
+      throw error;
+    }
   },
 
   logWorkout: async (payload) => {

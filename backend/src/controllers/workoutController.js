@@ -1,5 +1,5 @@
 const WorkoutLog = require("../models/WorkoutLog");
-const { recalculateStreakOnLog } = require("../utils/streakCalculator");
+const { recomputeStreak } = require("../utils/streakCalculator");
 
 // @route POST /api/workouts
 // Body: { date: "2026-07-19", status: "completed"|"rest"|"missed", exercisesDone: [{name, reps}], breakReason, note }
@@ -27,7 +27,7 @@ const upsertWorkoutLog = async (req, res, next) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    const streak = await recalculateStreakOnLog(req.user._id, log);
+    const streak = await recomputeStreak(req.user._id);
 
     res.status(200).json({ log, streak });
   } catch (error) {

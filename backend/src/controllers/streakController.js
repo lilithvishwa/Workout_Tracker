@@ -1,4 +1,5 @@
 const Streak = require("../models/Streak");
+const { recomputeStreak } = require("../utils/streakCalculator");
 
 // @route GET /api/streak
 const getStreak = async (req, res, next) => {
@@ -23,4 +24,16 @@ const getStreakHistory = async (req, res, next) => {
   }
 };
 
-module.exports = { getStreak, getStreakHistory };
+// @route POST /api/streak/recompute
+// Repairs the streak by replaying all logs from scratch. Use this once after
+// upgrading, or any time the streak looks wrong — it's always safe to call.
+const recomputeStreakEndpoint = async (req, res, next) => {
+  try {
+    const streak = await recomputeStreak(req.user._id);
+    res.json(streak);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getStreak, getStreakHistory, recomputeStreakEndpoint };

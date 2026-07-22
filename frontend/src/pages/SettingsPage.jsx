@@ -4,19 +4,37 @@ import { updateReminderSettingsApi } from "../api/authApi";
 import { useAuthStore } from "../store/authStore";
 import { useThemeStore } from "../store/themeStore";
 import { usePushNotifications } from "../hooks/usePushNotifications";
+import { getErrorMessage } from "../api/axiosClient";
+import { recomputeStreakApi } from "../api/streakApi";
+import { useWorkoutStore } from "../store/workoutStore";
 
 export default function SettingsPage() {
   const { user, logout } = useAuthStore();
   const { dark, toggle } = useThemeStore();
   const { enablePush } = usePushNotifications();
+  const fetchStreak = useWorkoutStore((s) => s.fetchStreak);
   const [reminderTime, setReminderTime] = useState("20:00");
+  const [repairing, setRepairing] = useState(false);
+
+  const handleRepairStreak = async () => {
+    setRepairing(true);
+    try {
+      await recomputeStreakApi();
+      await fetchStreak();
+      toast.success("Streak recalculated from your workout history");
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Couldn't repair streak"));
+    } finally {
+      setRepairing(false);
+    }
+  };
 
   const saveReminder = async () => {
     try {
       await updateReminderSettingsApi({ reminderTime, reminderEnabled: true });
       toast.success("Reminder time saved");
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to save");
+      toast.error(getErrorMessage(err, "Failed to save"));
     }
   };
 
@@ -76,6 +94,23 @@ export default function SettingsPage() {
               dark ? "translate-x-6" : ""
             }`}
           />
+        </button>
+      </div>
+
+      <div className="rounded-stamp border border-pine/10 bg-white/60 p-5 dark:bg-dusk-card dark:border-paper/10">
+        <h3 className="font-display font-semibold text-pine dark:text-paper">
+          Streak looking wrong?
+        </h3>
+        <p className="mt-1 text-sm text-pine/60 dark:text-paper/50">
+          Recalculates your streak and totals from your actual workout history. Safe to run
+          anytime.
+        </p>
+        <button
+          onClick={handleRepairStreak}
+          disabled={repairing}
+          className="mt-3 rounded-stamp bg-pine px-4 py-2 text-sm font-medium text-paper disabled:opacity-50"
+        >
+          {repairing ? "Repairing…" : "Repair my streak"}
         </button>
       </div>
 

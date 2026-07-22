@@ -13,6 +13,7 @@ import {
 import { ChevronLeft, ChevronRight, Check, X, Coffee } from "lucide-react";
 import { useWorkoutStore } from "../../store/workoutStore";
 import { getCurrentPlansApi } from "../../api/planApi";
+import { getErrorMessage } from "../../api/axiosClient";
 import BreakReasonModal from "./BreakReasonModal";
 import DayDetailModal from "./DayDetailModal";
 import toast from "react-hot-toast";
@@ -28,19 +29,28 @@ const statusStyles = {
 export default function WorkoutCalendar() {
   const [monthCursor, setMonthCursor] = useState(new Date());
   const [plans, setPlans] = useState([]);
+  const [plansLoading, setPlansLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [activeDate, setActiveDate] = useState(null); // date open in the check-in flow (new or edit)
   const [viewDate, setViewDate] = useState(null); // date open in the read-only detail modal
   const [pendingBreak, setPendingBreak] = useState(null);
 
-  const { monthLogs, fetchMonthLogs, logWorkout } = useWorkoutStore();
+  const { monthLogs, loading, fetchMonthLogs, logWorkout } = useWorkoutStore();
   const monthStr = format(monthCursor, "yyyy-MM");
 
   useEffect(() => {
-    fetchMonthLogs(monthStr);
+    setLoadError(null);
+    fetchMonthLogs(monthStr).catch((err) => {
+      setLoadError(getErrorMessage(err, "Couldn't load your calendar"));
+    });
   }, [monthStr]);
 
   useEffect(() => {
-    getCurrentPlansApi().then((res) => setPlans(res.data));
+    setPlansLoading(true);
+    getCurrentPlansApi()
+      .then((res) => setPlans(res.data))
+      .catch(() => setPlans([])) // plans are optional — don't block the calendar if this fails
+      .finally(() => setPlansLoading(false));
   }, []);
 
   const days = eachDayOfInterval({
@@ -112,6 +122,24 @@ export default function WorkoutCalendar() {
 
   return (
     <div className="rounded-stamp border border-pine/10 bg-white/60 p-4 dark:bg-dusk-card dark:border-paper/10">
+      {loadError && (
+        <div className="mb-3 rounded-stamp bg-clay/10 p-3 text-sm text-clay">
+          {loadError}{" "}
+          <button
+            onClick={() => {
+              setLoadError(null);
+              fetchMonthLogs(monthStr).catch((err) => setLoadError(getErrorMessage(err)));
+            }}
+            className="underline"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {loading && !loadError && (
+        <p className="mb-3 text-xs text-pine/50 dark:text-paper/40">Loading your log…</p>
+      )}
+
       <div className="mb-4 flex items-center justify-between">
         <button onClick={() => setMonthCursor(subMonths(monthCursor, 1))}>
           <ChevronLeft className="text-pine dark:text-paper" />
